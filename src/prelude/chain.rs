@@ -2,6 +2,7 @@ use super::Mesh;
 use std::path::Path;
 use std::rc::Rc;
 use std::fs::File;
+use std::fmt;
 use std::io::{prelude::*, BufReader};
 
 pub struct Chain {
@@ -54,5 +55,18 @@ impl Chain {
             mesh,
             coeff,
         })
+    }
+}
+
+impl fmt::Display for Chain {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for i in 0..self.mesh.edges.len() {
+            if self.coeff[i] == 0.0 { continue; }
+            if self.coeff[i] < 0.0 { write!(f, "- ")?; }
+            if self.coeff[i] > 0.0 { write!(f, "+ ")?; }
+            if self.coeff[i].abs() != 1.0 { write!(f, "{}*{:?} ", self.coeff[i].abs(), self.mesh.edges[i])?; }
+            else { write!(f, "{:?} ", self.mesh.edges[i])?; }
+        }
+        Ok(())
     }
 }
