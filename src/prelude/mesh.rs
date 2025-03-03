@@ -3,10 +3,12 @@ use std::fs::File;
 use std::path::Path;
 use std::io::{prelude::*, BufReader};
 
+pub type Edge = (usize, usize);
 pub type Triangle = (usize, usize, usize);
 
 pub struct Mesh {
     pub vertices: Vec<Vector3<f64>>,
+    pub edges: Vec<Edge>,
     pub triangles: Vec<Triangle>
 }
 
@@ -14,8 +16,9 @@ impl Mesh {
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Mesh, String> {
         let file = File::open(path).map_err(|e| format!("error opening file: {}", e))?;
         
-        let mut vertices = Vec::new();
         let mut num_vertices = 0;
+        let mut vertices = Vec::new();
+        let mut edges = Vec::new();
         let mut triangles = Vec::new();
 
         let mut lineno = 0;
@@ -48,11 +51,15 @@ impl Mesh {
 
                 if i >= vertices.len() || j >= vertices.len() || k >= vertices.len() { return Err("invalid face: index out of bounds.".to_string()); }
                 triangles.push((i, j, k));
+                edges.push((i,j));
+                edges.push((i,k));
+                edges.push((j,k));
             }
         }
 
         Ok(Mesh {
             vertices,
+            edges,
             triangles,
         })
     }
