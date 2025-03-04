@@ -36,4 +36,5 @@ fn main() {
     let median = median_shape(mesh.clone(), vec![c1, c2], vec![0.5, 0.5], 1e-5, 1e-5);
     println!("\n\n----------------------------");
     println!("Result: {}", median);
+    median.save("median.txt").expect("failed to save median chain");
 }

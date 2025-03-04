@@ -56,6 +56,16 @@ impl Chain {
             coeff,
         })
     }
+
+    pub fn save<P: AsRef<Path>>(&self, path: P) -> std::io::Result<()> {
+        let mut file = File::create(path)?;
+        for i in 0..self.coeff.len() {
+            if self.coeff[i] != 0.0 {
+                write!(file, "{} {}\n", self.mesh.edges[i].0, self.mesh.edges[i].1)?;
+            }
+        }
+        Ok(())
+    }
 }
 
 impl fmt::Display for Chain {
