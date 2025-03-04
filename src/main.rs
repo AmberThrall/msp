@@ -6,7 +6,14 @@ fn main() {
     // Load the mesh in from disk
     println!("Loading mesh...");
     let mesh = match Mesh::load("Plane.off") {
-        Ok(m) => Rc::new(m),
+        Ok(mut m) => {
+            println!("Orienting mesh...");
+            if m.orient().is_err() { 
+                std::eprintln!("Error: mesh is not orientable.");
+                std::process::exit(1);
+            }
+            Rc::new(m)
+        },
         Err(e) => {
             std::eprintln!("Error loading mesh: {}", e);
             std::process::exit(1);
@@ -34,8 +41,8 @@ fn main() {
     // Solve the problem
     println!("Solving LP...");
     let msp = MedianShape::new(mesh.clone(), 1e-5, 1e-5)
-        .add_chain(c1, 0.4)
-        .add_chain(c2, 0.6);
+        .add_chain(c1, 0.5)
+        .add_chain(c2, 0.5);
 
     let median = match msp.solve() {
         Ok(m) => m,
