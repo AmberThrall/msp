@@ -29,5 +29,7 @@ fn main() {
         }
     };
 
-    println!("{}", c1);
+    // Solve the problem
+    let median = median_shape(mesh.clone(), vec![c1, c2], vec![0.5, 0.5], 1e-5, 1e-5);
+    println!("Result: {}", median);
 }
