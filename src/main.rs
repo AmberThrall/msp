@@ -16,7 +16,7 @@ fn main() {
     // Load the chains in from disk
     println!("Loading chains...");
     let c1 = match Chain::load(mesh.clone(), "Chain1.txt") {
-        Ok(m) => m,
+        Ok(m) => Rc::new(m),
         Err(e) => {
             std::eprintln!("Error loading chain 1: {}", e);
             std::process::exit(1);
@@ -24,7 +24,7 @@ fn main() {
     };
 
     let c2 = match Chain::load(mesh.clone(), "Chain2.txt") {
-        Ok(m) => m,
+        Ok(m) => Rc::new(m),
         Err(e) => {
             std::eprintln!("Error loading chain 2: {}", e);
             std::process::exit(1);
@@ -33,8 +33,18 @@ fn main() {
 
     // Solve the problem
     println!("Solving LP...");
-    let median = median_shape(mesh.clone(), vec![c1, c2], vec![0.5, 0.5], 1e-5, 1e-5);
-    println!("\n\n----------------------------");
+    let msp = MedianShape::new(mesh.clone(), 1e-5, 1e-5)
+        .add_chain(c1, 0.4)
+        .add_chain(c2, 0.6);
+
+    let median = match msp.solve() {
+        Ok(m) => m,
+        Err(e) => {
+            std::eprintln!("Error solving LP: {}", e);
+            std::process::exit(1);
+        }
+    };
+
     println!("Result: {}", median);
     median.save("median.txt").expect("failed to save median chain");
 }

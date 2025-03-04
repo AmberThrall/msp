@@ -15,7 +15,11 @@ struct Variables {
     pub s_minus: Vec<Vec<Variable>>,
 }
 
-pub fn median_shape(mesh: Rc<Mesh>, input: Vec<Chain>, alpha: Vec<f64>, mu: f64, lambda: f64) -> Chain {
+pub fn median_shape(mesh: Rc<Mesh>, input: Vec<Rc<Chain>>, alpha: Vec<f64>, mu: f64, lambda: f64) -> Result<Chain, String> {
+    if input.len() != alpha.len() {
+        return Err(format!("invalid input, got {} chains and {} weights.", input.len(), alpha.len()));
+    }
+
     ///////////////////////////
     // Construct the problem //
     ///////////////////////////
@@ -74,8 +78,9 @@ pub fn median_shape(mesh: Rc<Mesh>, input: Vec<Chain>, alpha: Vec<f64>, mu: f64,
 
         if !tri.is_face(&edge) { 0.0 }
         else if edge.orientation() == tri.orientation() { 1.0 }
-        else { 0.0 }
+        else { -1.0 }
     });
+
     for h in 0..N {
         for i in 0..m {
             let lhs = vars.t_plus[i] - vars.t_minus[i] - input[h].coeff[i];
@@ -100,7 +105,7 @@ pub fn median_shape(mesh: Rc<Mesh>, input: Vec<Chain>, alpha: Vec<f64>, mu: f64,
         .using(default_solver)
         .with_all(constraints)
         .solve()
-        .unwrap();
+        .map_err(|e| format!("failed to solve LP: {}", e))?;
 
     let mut res = Chain::zero(mesh.clone());
     for i in 0..m {
@@ -110,5 +115,5 @@ pub fn median_shape(mesh: Rc<Mesh>, input: Vec<Chain>, alpha: Vec<f64>, mu: f64,
         }
     }
 
-    res
+    Ok(res)
 }
