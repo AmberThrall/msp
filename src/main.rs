@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 fn main() {
     // Load the mesh in from disk
+    println!("Loading mesh...");
     let mesh = match Mesh::load("Plane.off") {
         Ok(m) => Rc::new(m),
         Err(e) => {
@@ -13,6 +14,7 @@ fn main() {
     };
 
     // Load the chains in from disk
+    println!("Loading chains...");
     let c1 = match Chain::load(mesh.clone(), "Chain1.txt") {
         Ok(m) => m,
         Err(e) => {
@@ -30,6 +32,8 @@ fn main() {
     };
 
     // Solve the problem
+    println!("Solving LP...");
     let median = median_shape(mesh.clone(), vec![c1, c2], vec![0.5, 0.5], 1e-5, 1e-5);
+    println!("\n\n----------------------------");
     println!("Result: {}", median);
 }

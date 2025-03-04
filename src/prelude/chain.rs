@@ -1,4 +1,4 @@
-use super::Mesh;
+use super::{Edge, Mesh};
 use std::path::Path;
 use std::rc::Rc;
 use std::fs::File;
@@ -36,12 +36,12 @@ impl Chain {
             // Find the edge (i,j) in the mesh
             let mut found = false;
             for idx in 0..mesh.edges.len() {
-                if mesh.edges[idx] == (i,j) {
+                if mesh.edges[idx] == Edge(i,j) {
                     coeff[idx] = 1.0;
                     found = true;
                     break;
                 }
-                else if mesh.edges[idx] == (j,i) {
+                else if mesh.edges[idx] == Edge(j,i) {
                     coeff[idx] = -1.0;
                     found = true;
                     break;

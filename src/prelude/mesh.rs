@@ -3,13 +3,42 @@ use std::fs::File;
 use std::path::Path;
 use std::io::{prelude::*, BufReader};
 
-pub type Edge = (usize, usize);
-pub type Triangle = (usize, usize, usize);
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Edge(pub usize, pub usize);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Triangle(pub usize, pub usize, pub usize);
 
 pub struct Mesh {
     pub vertices: Vec<Vector3<f64>>,
     pub edges: Vec<Edge>,
     pub triangles: Vec<Triangle>
+}
+
+impl Edge {
+    pub fn length(&self, mesh: &Mesh) -> f64 {
+        let ab = mesh.vertices[self.0]-mesh.vertices[self.1];
+        ab.norm() as f64
+    }
+}
+
+impl Triangle {
+    pub fn area(&self, mesh: &Mesh) -> f64 {
+        let ab = mesh.vertices[self.0]-mesh.vertices[self.1];
+        let ac = mesh.vertices[self.0]-mesh.vertices[self.2];
+        let cross = ab.cross(&ac);
+        (cross.norm() as f64) / 2.0
+    }
+
+    pub fn is_face(&self, edge: &Edge) -> bool {
+             if self.0 == edge.0 && self.1 == edge.1 { true }
+        else if self.0 == edge.0 && self.2 == edge.1 { true }
+        else if self.1 == edge.0 && self.2 == edge.1 { true }
+        else if self.0 == edge.1 && self.1 == edge.0 { true }
+        else if self.0 == edge.1 && self.2 == edge.0 { true }
+        else if self.1 == edge.1 && self.2 == edge.0 { true }
+        else { false }
+    }
 }
 
 impl Mesh {
@@ -50,10 +79,10 @@ impl Mesh {
                 let k = parts[3].parse::<usize>().map_err(|_| "invalid face".to_string())?;
 
                 if i >= vertices.len() || j >= vertices.len() || k >= vertices.len() { return Err("invalid face: index out of bounds.".to_string()); }
-                triangles.push((i, j, k));
-                edges.push((i,j));
-                edges.push((i,k));
-                edges.push((j,k));
+                triangles.push(Triangle(i, j, k));
+                edges.push(Edge(i,j));
+                edges.push(Edge(i,k));
+                edges.push(Edge(j,k));
             }
         }
 

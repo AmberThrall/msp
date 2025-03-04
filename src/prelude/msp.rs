@@ -15,28 +15,6 @@ struct Variables {
     pub s_minus: Vec<Vec<Variable>>,
 }
 
-fn is_face(edge: Edge, tri: Triangle) -> bool {
-         if tri.0 == edge.0 && tri.1 == edge.1 { true }
-    else if tri.0 == edge.0 && tri.2 == edge.1 { true }
-    else if tri.1 == edge.0 && tri.2 == edge.1 { true }
-    else if tri.0 == edge.1 && tri.1 == edge.0 { true }
-    else if tri.0 == edge.1 && tri.2 == edge.0 { true }
-    else if tri.1 == edge.1 && tri.2 == edge.0 { true }
-    else { false }
-}
-
-fn edge_length(mesh: &Mesh, edge: &Edge) -> f64 {
-    let ab = mesh.vertices[edge.0]-mesh.vertices[edge.1];
-    ab.norm() as f64
-}
-
-fn area(mesh: &Mesh, tri: &Triangle) -> f64 {
-    let ab = mesh.vertices[tri.0]-mesh.vertices[tri.1];
-    let ac = mesh.vertices[tri.0]-mesh.vertices[tri.2];
-    let cross = ab.cross(&ac);
-    (cross.norm() as f64) / 2.0
-}
-
 pub fn median_shape(mesh: Rc<Mesh>, input: Vec<Chain>, alpha: Vec<f64>, mu: f64, lambda: f64) -> Chain {
     ///////////////////////////
     // Construct the problem //
@@ -70,8 +48,8 @@ pub fn median_shape(mesh: Rc<Mesh>, input: Vec<Chain>, alpha: Vec<f64>, mu: f64,
     }
 
     //  - Objective Function
-    let w: Vec<f64> = mesh.edges.iter().map(|e| edge_length(&mesh, e)).collect();
-    let v: Vec<f64> = mesh.triangles.iter().map(|t| area(&mesh, t)).collect();
+    let w: Vec<f64> = mesh.edges.iter().map(|e| e.length(&mesh)).collect();
+    let v: Vec<f64> = mesh.triangles.iter().map(|t| t.area(&mesh)).collect();
 
     let mut objective: Expression = 0.into();
     for i in 0..m {
@@ -93,7 +71,7 @@ pub fn median_shape(mesh: Rc<Mesh>, input: Vec<Chain>, alpha: Vec<f64>, mu: f64,
     let B = DMatrix::from_fn(m, n, |r, c| {
         let sigma = mesh.edges[r];
         let tau = mesh.triangles[c];
-        if is_face(sigma, tau) { 1.0 } else { 0.0 }
+        if tau.is_face(&sigma) { 1.0 } else { 0.0 }
     });
     for h in 0..N {
         for i in 0..m {
