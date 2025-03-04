@@ -69,9 +69,12 @@ pub fn median_shape(mesh: Rc<Mesh>, input: Vec<Chain>, alpha: Vec<f64>, mu: f64,
     //  - Constraints
     let mut constraints = Vec::new();
     let B = DMatrix::from_fn(m, n, |r, c| {
-        let sigma = mesh.edges[r];
-        let tau = mesh.triangles[c];
-        if tau.is_face(&sigma) { 1.0 } else { 0.0 }
+        let edge = mesh.edges[r];
+        let tri = mesh.triangles[c];
+
+        if !tri.is_face(&edge) { 0.0 }
+        else if edge.orientation() == tri.orientation() { 1.0 }
+        else { 0.0 }
     });
     for h in 0..N {
         for i in 0..m {

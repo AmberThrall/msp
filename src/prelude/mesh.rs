@@ -4,6 +4,12 @@ use std::path::Path;
 use std::io::{prelude::*, BufReader};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Orientation {
+    Even,
+    Odd
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Edge(pub usize, pub usize);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -19,6 +25,11 @@ impl Edge {
     pub fn length(&self, mesh: &Mesh) -> f64 {
         let ab = mesh.vertices[self.0]-mesh.vertices[self.1];
         ab.norm() as f64
+    }
+
+    pub fn orientation(&self) -> Orientation {
+        if self.0 < self.1 { Orientation::Even }
+        else { Orientation::Odd }
     }
 }
 
@@ -38,6 +49,16 @@ impl Triangle {
         else if self.0 == edge.1 && self.2 == edge.0 { true }
         else if self.1 == edge.1 && self.2 == edge.0 { true }
         else { false }
+    }
+
+    pub fn orientation(&self) -> Orientation {
+             if self.0 < self.1 && self.1 < self.2 { Orientation::Even }
+        else if self.0 < self.2 && self.2 < self.1 { Orientation::Odd  }
+        else if self.1 < self.0 && self.0 < self.2 { Orientation::Odd  }
+        else if self.1 < self.2 && self.2 < self.0 { Orientation::Even }
+        else if self.2 < self.1 && self.1 < self.0 { Orientation::Odd  }
+        else if self.2 < self.0 && self.0 < self.1 { Orientation::Even }
+        else { Orientation::Odd }
     }
 }
 
