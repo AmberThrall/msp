@@ -20,6 +20,7 @@ pub fn median_shape(mesh: Rc<Mesh>, input: Vec<Rc<Chain>>, alpha: Vec<f64>, mu: 
         return Err(format!("invalid input, got {} chains and {} weights.", input.len(), alpha.len()));
     }
 
+
     ///////////////////////////
     // Construct the problem //
     ///////////////////////////
@@ -52,6 +53,8 @@ pub fn median_shape(mesh: Rc<Mesh>, input: Vec<Rc<Chain>>, alpha: Vec<f64>, mu: 
     }
 
     //  - Objective Function
+    // sum {h in 1..k} ( a[h]*(sum {i in 1..m} w[i]*(qip[h,i]+qim[h,i])) + Lambda*(sum {j in 1..n} v[j]*(rip[h,j]+rim[h,j]))) 
+    //      + Mu*(sum {i in 1..m} w[i]*(tp[i]+tm[i]));
     let w: Vec<f64> = mesh.edges.iter().map(|e| e.length(&mesh)).collect();
     let v: Vec<f64> = mesh.triangles.iter().map(|t| t.area(&mesh)).collect();
 
@@ -71,6 +74,7 @@ pub fn median_shape(mesh: Rc<Mesh>, input: Vec<Rc<Chain>>, alpha: Vec<f64>, mu: 
     }
 
     //  - Constraints
+    // subject to FlatDecomp {h in 1..k, i in 1..m}: tp[i]-tm[i] - Ti[h,i] = qip[h,i]-qim[h,i] + sum {j in 1..n} B[i,j]*(rip[h,j]-rim[h,j]);
     let mut constraints = Vec::new();
     let B = DMatrix::from_fn(m, n, |r, c| {
         let edge = mesh.edges[r];
@@ -105,7 +109,7 @@ pub fn median_shape(mesh: Rc<Mesh>, input: Vec<Rc<Chain>>, alpha: Vec<f64>, mu: 
         .using(default_solver)
         .with_all(constraints)
         .solve()
-        .map_err(|e| format!("failed to solve LP: {}", e))?;
+        .map_err(|e| format!("{}", e))?;
 
     let mut res = Chain::zero(mesh.clone());
     for i in 0..m {

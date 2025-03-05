@@ -3,10 +3,16 @@ use prelude::*;
 use std::rc::Rc;
 
 fn main() {
+    let mut test = Mesh::load("test.off").unwrap();
+    test.orient().unwrap();
+    println!("edges = {:?}", test.edges);
+    println!("triangles = {:?}", test.triangles);
+
     // Load the mesh in from disk
     println!("Loading mesh...");
     let mesh = match Mesh::load("Plane.off") {
         Ok(mut m) => {
+            // Orient the mesh
             println!("Orienting mesh...");
             if m.orient().is_err() { 
                 std::eprintln!("Error: mesh is not orientable.");
@@ -38,11 +44,20 @@ fn main() {
         }
     };
 
+    let c3 = match Chain::load(mesh.clone(), "Chain3.txt") {
+        Ok(m) => Rc::new(m),
+        Err(e) => {
+            std::eprintln!("Error loading chain 3: {}", e);
+            std::process::exit(1);
+        }
+    };
+
     // Solve the problem
     println!("Solving LP...");
-    let msp = MedianShape::new(mesh.clone(), 1e-5, 1e-5)
-        .add_chain(c1, 0.5)
-        .add_chain(c2, 0.5);
+    let msp = MedianShape::new(mesh.clone(), 1e-3, 1e-5)
+        .add_chain(c1, 0.33)
+        .add_chain(c2, 0.33)
+        .add_chain(c3, 0.34);
 
     let median = match msp.solve() {
         Ok(m) => m,

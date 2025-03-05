@@ -43,10 +43,10 @@ impl Edge {
         let a = self.0;
         let b = self.1;
         if tri.0 == a && tri.1 == b { self.0 = a; self.1 = b; }
-        if tri.0 == a && tri.2 == b { self.1 = a; self.0 = b; }
+        if tri.0 == a && tri.2 == b { self.0 = b; self.1 = a; }
         if tri.1 == a && tri.2 == b { self.0 = a; self.1 = b; }
         if tri.0 == b && tri.1 == a { self.0 = b; self.1 = a; }
-        if tri.0 == b && tri.2 == a { self.1 = b; self.0 = a; }
+        if tri.0 == b && tri.2 == a { self.0 = a; self.1 = b; }
         if tri.1 == b && tri.2 == a { self.0 = b; self.1 = a; }
     }
 
@@ -136,9 +136,9 @@ impl Mesh {
 
                 if i >= vertices.len() || j >= vertices.len() || k >= vertices.len() { return Err("invalid face: index out of bounds.".to_string()); }
                 triangles.push(Triangle(i, j, k));
-                edges.push(Edge(i,j));
-                edges.push(Edge(i,k));
-                edges.push(Edge(j,k));
+                if !edges.contains(&Edge(i,j)) && !edges.contains(&Edge(j,i)) { edges.push(Edge(i,j)); }
+                if !edges.contains(&Edge(i,k)) && !edges.contains(&Edge(k,i)) { edges.push(Edge(i,k)); }
+                if !edges.contains(&Edge(j,k)) && !edges.contains(&Edge(k,j)) { edges.push(Edge(j,k)); }
             }
         }
 
@@ -217,7 +217,16 @@ impl Mesh {
     }
 
     fn _edges(&self, tri: usize) -> [usize; 3] {
-        [3 * tri, 3 * tri + 1, 3 * tri + 2]
+        let mut edges = [0; 3];
+        let mut idx = 0;
+        for i in 0..self.edges.len() {
+            if self.triangles[tri].is_face(&self.edges[i]) {
+                edges[idx] = i;
+                idx += 1;
+            }
+        }
+
+        edges
     }
 
     fn _nbhrs(&self, tri: usize) -> Vec<usize> {

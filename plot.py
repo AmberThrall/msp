@@ -24,6 +24,7 @@ def read_chain(filename):
 V, F = read_off("Plane.off")
 c1 = read_chain("Chain1.txt")
 c2 = read_chain("Chain2.txt")
+c3 = read_chain("Chain3.txt")
 c_median = read_chain("median.txt")
 
 # Setup figure
@@ -38,12 +39,12 @@ ax.plot_trisurf(X, Y, Z, triangles=F, color=(0,0,0,0), edgecolor='gray')
 #ax.scatter3D(X, Y, Z, color='black')
 
 # Plot the chains
-for color, chain in [("green", c1), ("blue", c2), ("red", c_median)]:
+for color, chain in [("green", c1), ("blue", c2), ("red", c3), ("black", c_median)]:
     if len(chain) == 0:
         continue
     data = [[[V[i][0], V[i][2], V[i][1]] for i in x] for x in chain]
     lc = Line3DCollection(data, color=color)
-    lc.set_linewidths(5 if color == "red" else 2.5)
+    lc.set_linewidths(5 if color == "black" else 2.5)
     ax.add_collection3d(lc)
 
 ax.view_init(elev=90, azim=0)
