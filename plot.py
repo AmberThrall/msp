@@ -39,7 +39,8 @@ ax.plot_trisurf(X, Y, Z, triangles=F, color=(0,0,0,0), edgecolor='gray')
 #ax.scatter3D(X, Y, Z, color='black')
 
 # Plot the chains
-for color, chain in [("green", c1), ("blue", c2), ("red", c3), ("black", c_median)]:
+#for color, chain in [("green", c1), ("blue", c2), ("red", c3), ("black", c_median)]:
+for color, chain in [("green", c1), ("blue", c2),  ("black", c_median)]:
     if len(chain) == 0:
         continue
     data = [[[V[i][0], V[i][2], V[i][1]] for i in x] for x in chain]

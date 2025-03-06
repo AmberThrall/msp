@@ -150,10 +150,11 @@ impl Mesh {
     }
 
     pub fn orient(&mut self) -> Result<(), String> {
-        // 1. Set the orientation of a random triangle and induce its oriention onto its faces.
-        //    Then get its neighbors.
         let mut visited_edges = vec![false; self.edges.len()];
         let mut visited_tris = vec![false; self.triangles.len()];
+
+        // 1. Set the orientation of a random triangle and induce its oriention onto its faces.
+        //    Then get its neighbors.
         self.triangles[0].orient(Orientation::Even);
         visited_tris[0] = true;
         self._orient_edges(0, &mut visited_edges);
@@ -164,25 +165,25 @@ impl Mesh {
         //      currrent orientation.
         //   b. Induce orientation onto non-oriented faces.
         //   c. Add each unoriented neighbor to the neighbors list.
-        while let Some(nbhr) = nbhrs.pop() {
+        while let Some(tri) = nbhrs.pop() {
             let mut orientations = Vec::new();
-            visited_tris[nbhr] = true;
+            visited_tris[tri] = true;
 
             // Determine the needed orientations
-            let edges = self._edges(nbhr);
+            let edges = self._edges(tri);
             for i in 0..3 {
                 if !visited_edges[edges[i]] { continue; }
 
                 let edge_o = self.edges[edges[i]].orientation();
                 let mut edge_clone = self.edges[edges[i]].clone();
 
-                self.triangles[nbhr].orient(Orientation::Even);
-                edge_clone.induce_orientation(&self.triangles[nbhr]);
+                self.triangles[tri].orient(Orientation::Even);
+                edge_clone.induce_orientation(&self.triangles[tri]);
                 if edge_clone.orientation() == edge_o {
-                    self.triangles[nbhr].swap_orientation();
+                    self.triangles[tri].swap_orientation();
                 }
 
-                orientations.push(self.triangles[nbhr].orientation());
+                orientations.push(self.triangles[tri].orientation());
             }
 
             // Check that we only need one orienation
@@ -192,11 +193,14 @@ impl Mesh {
                         return Err("unorientable.".to_string());
                     }
                 }
+            } else if orientations.len() == 0 {
+                orientations.push(Orientation::Even);
             }
 
             // Induce orientation onto faces and get neighbors
-            self._orient_edges(nbhr, &mut visited_edges);
-            for nbhr_of_nbhr in self._nbhrs(nbhr) {
+            self.triangles[tri].orient(orientations[0]);
+            self._orient_edges(tri, &mut visited_edges);
+            for nbhr_of_nbhr in self._nbhrs(tri) {
                 if !visited_tris[nbhr_of_nbhr] && !nbhrs.contains(&nbhr_of_nbhr) {
                     nbhrs.push(nbhr_of_nbhr);
                 }
