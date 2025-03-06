@@ -15,6 +15,7 @@ pub struct Edge(pub usize, pub usize);
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Triangle(pub usize, pub usize, pub usize);
 
+/// Represents a mesh in 3D. Assumes that the y-axis is the upwards direction.
 pub struct Mesh {
     pub vertices: Vec<Vector3<f64>>,
     pub edges: Vec<Edge>,
@@ -67,11 +68,19 @@ impl Edge {
 }
 
 impl Triangle {
-    pub fn area(&self, mesh: &Mesh) -> f64 {
+    pub fn signed_area(&self, mesh: &Mesh) -> f64 {
         let ab = mesh.vertices[self.0]-mesh.vertices[self.1];
         let ac = mesh.vertices[self.0]-mesh.vertices[self.2];
         let cross = ab.cross(&ac);
-        (cross.norm() as f64) / 2.0
+        if cross.y > 0.0 {
+            (cross.norm() as f64) / 2.0
+        } else {
+            -(cross.norm() as f64) / 2.0
+        }
+    }
+
+    pub fn area(&self, mesh: &Mesh) -> f64 {
+        self.signed_area(mesh).abs()    
     }
 
     pub fn is_face(&self, edge: &Edge) -> bool {
@@ -170,14 +179,7 @@ impl Mesh {
         // Orient the triangles by signed area.
         for i in 0..self.triangles.len() {
             self.triangles[i].orient(Orientation::Even);
-            let a = nalgebra::Vector2::new(self.vertices[self.triangles[i].0].x, self.vertices[self.triangles[i].0].z);
-            let b = nalgebra::Vector2::new(self.vertices[self.triangles[i].1].x, self.vertices[self.triangles[i].1].z);
-            let c = nalgebra::Vector2::new(self.vertices[self.triangles[i].2].x, self.vertices[self.triangles[i].2].z);
-
-            let e1 = a-b;
-            let e2 = a-c;
-            let area = e1.x * e2.y - e2.x * e1.y;
-            if area < 0.0 {
+            if self.triangles[i].signed_area(self) < 0.0 {
                 self.triangles[i].swap_orientation();
             }
         }
