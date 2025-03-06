@@ -40,14 +40,19 @@ impl Edge {
     }
 
     pub fn induce_orientation(&mut self, tri: &Triangle) {
-        let a = self.0;
-        let b = self.1;
-        if tri.0 == a && tri.1 == b { self.0 = a; self.1 = b; }
-        if tri.0 == a && tri.2 == b { self.0 = b; self.1 = a; }
-        if tri.1 == a && tri.2 == b { self.0 = a; self.1 = b; }
-        if tri.0 == b && tri.1 == a { self.0 = b; self.1 = a; }
-        if tri.0 == b && tri.2 == a { self.0 = a; self.1 = b; }
-        if tri.1 == b && tri.2 == a { self.0 = b; self.1 = a; }
+        let mut o = Vec::new();
+        let mut odd_idx = false;
+        for (i, v) in [tri.0, tri.1, tri.2].iter().enumerate() {
+            if self.0 != *v && self.1 != *v {
+                odd_idx = i % 2 == 1;
+            } else {
+                o.push(*v);
+            }
+        }
+
+        self.0 = o[0];
+        self.1 = o[1];
+        if odd_idx { self.swap_orientation(); }
     }
 
     pub fn orientation(&self) -> Orientation {
@@ -65,13 +70,8 @@ impl Triangle {
     }
 
     pub fn is_face(&self, edge: &Edge) -> bool {
-             if self.0 == edge.0 && self.1 == edge.1 { true }
-        else if self.0 == edge.0 && self.2 == edge.1 { true }
-        else if self.1 == edge.0 && self.2 == edge.1 { true }
-        else if self.0 == edge.1 && self.1 == edge.0 { true }
-        else if self.0 == edge.1 && self.2 == edge.0 { true }
-        else if self.1 == edge.1 && self.2 == edge.0 { true }
-        else { false }
+        let v = [self.0, self.1, self.2];
+        v.contains(&edge.0) && v.contains(&edge.1)
     }
 
     pub fn swap_orientation(&mut self) {
@@ -87,12 +87,12 @@ impl Triangle {
     }
 
     pub fn orientation(&self) -> Orientation {
-             if self.0 < self.1 && self.1 < self.2 { Orientation::Even }
-        else if self.0 < self.2 && self.2 < self.1 { Orientation::Odd  }
-        else if self.1 < self.0 && self.0 < self.2 { Orientation::Odd  }
-        else if self.1 < self.2 && self.2 < self.0 { Orientation::Even }
-        else if self.2 < self.1 && self.1 < self.0 { Orientation::Odd  }
-        else if self.2 < self.0 && self.0 < self.1 { Orientation::Even }
+             if self.0 < self.1 && self.1 < self.2 { Orientation::Even } // [0,1,2]
+        else if self.0 < self.2 && self.2 < self.1 { Orientation::Odd  } // [0,2,1]
+        else if self.1 < self.0 && self.0 < self.2 { Orientation::Odd  } // [1,0,2]
+        else if self.1 < self.2 && self.2 < self.0 { Orientation::Even } // [1,2,0]
+        else if self.2 < self.1 && self.1 < self.0 { Orientation::Odd  } // [2,1,0]
+        else if self.2 < self.0 && self.0 < self.1 { Orientation::Even } // [2,0,1]
         else { Orientation::Odd }
     }
 }
