@@ -42,7 +42,7 @@ impl Chain {
                     break;
                 }
                 else if mesh.edges[idx] == Edge(j,i) {
-                    coeff[idx] = -1.0;
+                    coeff[idx] = 1.0;
                     found = true;
                     break;
                 }

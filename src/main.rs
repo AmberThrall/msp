@@ -54,13 +54,10 @@ fn main() {
 
     // Solve the problem
     println!("Solving LP...");
-    /*let msp = MedianShape::new(mesh.clone(), 1e-3, 1e-5)
-        .add_chain(c1.clone(), 1.0)
-        .add_chain(c2.clone(), 1.0)
-        .add_chain(c3.clone(), 1.0);*/
-    let msp = MedianShape::new(mesh.clone(), 1e-5, 1e-7)
-        .add_chain(c1.clone(), 1.0)
-        .add_chain(c2.clone(), 1.0);
+    let msp = MedianShape::new(mesh.clone(), 1e-3, 1e-5)
+        .add_chain(c1.clone(), 0.33)
+        .add_chain(c2.clone(), 0.33)
+        .add_chain(c3.clone(), 0.34);
 
 
     let median = match msp.solve() {

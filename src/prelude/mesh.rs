@@ -34,7 +34,12 @@ impl Edge {
     }
 
     pub fn orient(&mut self, orientation: Orientation) {
-        if self.orientation() != orientation { 
+        let a = self.0;
+        let b = self.1;
+        self.0 = a.min(b);
+        self.1 = a.max(b);
+
+        if orientation == Orientation::Odd { 
             self.swap_orientation();
         }
     }
@@ -81,7 +86,14 @@ impl Triangle {
     }
 
     pub fn orient(&mut self, orientation: Orientation) {
-        if self.orientation() != orientation { 
+        let mut v = vec![self.0, self.1, self.2];
+        v.sort();
+
+        self.0 = v[0];
+        self.1 = v[1];
+        self.2 = v[2];
+
+        if orientation == Orientation::Odd { 
             self.swap_orientation();    
         }
     }
@@ -148,8 +160,44 @@ impl Mesh {
             triangles,
         })
     }
-
+    
     pub fn orient(&mut self) -> Result<(), String> {
+        // Orient the edges by lexicographic order
+        for i in 0..self.edges.len() {
+            self.edges[i].orient(Orientation::Even);
+        }
+
+        // Orient the triangles by signed area.
+        for i in 0..self.triangles.len() {
+            self.triangles[i].orient(Orientation::Even);
+            let a = nalgebra::Vector2::new(self.vertices[self.triangles[i].0].x, self.vertices[self.triangles[i].0].z);
+            let b = nalgebra::Vector2::new(self.vertices[self.triangles[i].1].x, self.vertices[self.triangles[i].1].z);
+            let c = nalgebra::Vector2::new(self.vertices[self.triangles[i].2].x, self.vertices[self.triangles[i].2].z);
+
+            let e1 = a-b;
+            let e2 = a-c;
+            let area = e1.x * e2.y - e2.x * e1.y;
+            if area < 0.0 {
+                self.triangles[i].swap_orientation();
+            }
+        }
+
+        // Induce orientations onto edges
+        let mut visited = vec![false; self.edges.len()];
+        for tri in 0..self.triangles.len() {
+            let edges = self._edges(tri);
+            for edge in edges {
+                if visited[edge] { continue }
+                self.edges[edge].induce_orientation(&self.triangles[tri]);
+                visited[edge] = true;
+            }
+        }
+        
+
+        Ok(())        
+    }
+
+    pub fn orient_old(&mut self) -> Result<(), String> {
         let mut visited_edges = vec![false; self.edges.len()];
         let mut visited_tris = vec![false; self.triangles.len()];
 
