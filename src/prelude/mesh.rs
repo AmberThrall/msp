@@ -5,8 +5,8 @@ use std::io::{prelude::*, BufReader};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Orientation {
-    Even,
-    Odd
+    CCW,
+    CW
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -34,17 +34,6 @@ impl Edge {
         self.1 = tmp;
     }
 
-    pub fn orient(&mut self, orientation: Orientation) {
-        let a = self.0;
-        let b = self.1;
-        self.0 = a.min(b);
-        self.1 = a.max(b);
-
-        if orientation == Orientation::Odd { 
-            self.swap_orientation();
-        }
-    }
-
     pub fn induce_orientation(&mut self, tri: &Triangle) {
         let mut o = Vec::new();
         let mut odd_idx = false;
@@ -62,19 +51,31 @@ impl Edge {
     }
 
     pub fn orientation(&self) -> Orientation {
-        if self.0 < self.1 { Orientation::Even }
-        else { Orientation::Odd }
+        if self.0 < self.1 { Orientation::CCW }
+        else { Orientation::CW }
     }
 }
 
 impl Triangle {
     pub fn signed_area(&self, mesh: &Mesh) -> f64 {
-        let ab = mesh.vertices[self.0]-mesh.vertices[self.1];
-        let ac = mesh.vertices[self.0]-mesh.vertices[self.2];
+        let a = mesh.vertices[self.0];
+        let b = mesh.vertices[self.1];
+        let c = mesh.vertices[self.2];
+
+        let ab = b - a;
+        let ac = c - a;
         let cross = ab.cross(&ac);
-        if cross.y > 0.0 {
+
+        //let centroid = (a + b + c) / 3.0;
+        //let outward = centroid.normalize();
+        let outward = Vector3::y();
+
+        if cross.dot(&outward) > 0.0 {
+            // Oriented CCW
             (cross.norm() as f64) / 2.0
-        } else {
+        } 
+        else {
+            // Oriented CW
             -(cross.norm() as f64) / 2.0
         }
     }
@@ -94,27 +95,15 @@ impl Triangle {
         self.1 = tmp;
     }
 
-    pub fn orient(&mut self, orientation: Orientation) {
-        let mut v = vec![self.0, self.1, self.2];
-        v.sort();
-
-        self.0 = v[0];
-        self.1 = v[1];
-        self.2 = v[2];
-
-        if orientation == Orientation::Odd { 
+    pub fn orient(&mut self, orientation: Orientation, mesh: &Mesh) {
+        if orientation != self.orientation(mesh) { 
             self.swap_orientation();    
         }
     }
 
-    pub fn orientation(&self) -> Orientation {
-             if self.0 < self.1 && self.1 < self.2 { Orientation::Even } // [0,1,2]
-        else if self.0 < self.2 && self.2 < self.1 { Orientation::Odd  } // [0,2,1]
-        else if self.1 < self.0 && self.0 < self.2 { Orientation::Odd  } // [1,0,2]
-        else if self.1 < self.2 && self.2 < self.0 { Orientation::Even } // [1,2,0]
-        else if self.2 < self.1 && self.1 < self.0 { Orientation::Odd  } // [2,1,0]
-        else if self.2 < self.0 && self.0 < self.1 { Orientation::Even } // [2,0,1]
-        else { Orientation::Odd }
+    pub fn orientation(&self, mesh: &Mesh) -> Orientation {
+        if self.signed_area(mesh) > 0.0 { return Orientation::CCW }
+        else { return Orientation::CW }
     }
 }
 
@@ -157,9 +146,9 @@ impl Mesh {
 
                 if i >= vertices.len() || j >= vertices.len() || k >= vertices.len() { return Err("invalid face: index out of bounds.".to_string()); }
                 triangles.push(Triangle(i, j, k));
-                if !edges.contains(&Edge(i,j)) && !edges.contains(&Edge(j,i)) { edges.push(Edge(i,j)); }
-                if !edges.contains(&Edge(i,k)) && !edges.contains(&Edge(k,i)) { edges.push(Edge(i,k)); }
-                if !edges.contains(&Edge(j,k)) && !edges.contains(&Edge(k,j)) { edges.push(Edge(j,k)); }
+                if !edges.contains(&Edge(i,j)) && !edges.contains(&Edge(j,i)) { edges.push(Edge(i.min(j),j.max(i))); }
+                if !edges.contains(&Edge(i,k)) && !edges.contains(&Edge(k,i)) { edges.push(Edge(i.min(k),k.max(i))); }
+                if !edges.contains(&Edge(j,k)) && !edges.contains(&Edge(k,j)) { edges.push(Edge(j.min(k),k.max(j))); }
             }
         }
 
@@ -171,103 +160,26 @@ impl Mesh {
     }
     
     pub fn orient(&mut self) -> Result<(), String> {
-        // Orient the edges by lexicographic order
-        for i in 0..self.edges.len() {
-            self.edges[i].orient(Orientation::Even);
-        }
-
         // Orient the triangles by signed area.
         for i in 0..self.triangles.len() {
-            self.triangles[i].orient(Orientation::Even);
-            if self.triangles[i].signed_area(self) < 0.0 {
-                self.triangles[i].swap_orientation();
-            }
+            let mut tri = self.triangles[i].clone();
+            tri.orient(Orientation::CCW, self); 
+            self.triangles[i] = tri;
         }
 
         // Induce orientations onto edges
         let mut visited = vec![false; self.edges.len()];
         for tri in 0..self.triangles.len() {
-            let edges = self._edges(tri);
+            let edges = self._edges(tri); // Get the edges of tri.
             for edge in edges {
                 if visited[edge] { continue }
+                
                 self.edges[edge].induce_orientation(&self.triangles[tri]);
                 visited[edge] = true;
             }
         }
-        
 
         Ok(())        
-    }
-
-    pub fn orient_old(&mut self) -> Result<(), String> {
-        let mut visited_edges = vec![false; self.edges.len()];
-        let mut visited_tris = vec![false; self.triangles.len()];
-
-        // 1. Set the orientation of a random triangle and induce its oriention onto its faces.
-        //    Then get its neighbors.
-        self.triangles[0].orient(Orientation::Even);
-        visited_tris[0] = true;
-        self._orient_edges(0, &mut visited_edges);
-        let mut nbhrs = self._nbhrs(0); 
-
-        // 2. For each neighbor:
-        //   a. Set the orientation such that the induced oriention on its faces is opposite their
-        //      currrent orientation.
-        //   b. Induce orientation onto non-oriented faces.
-        //   c. Add each unoriented neighbor to the neighbors list.
-        while let Some(tri) = nbhrs.pop() {
-            let mut orientations = Vec::new();
-            visited_tris[tri] = true;
-
-            // Determine the needed orientations
-            let edges = self._edges(tri);
-            for i in 0..3 {
-                if !visited_edges[edges[i]] { continue; }
-
-                let edge_o = self.edges[edges[i]].orientation();
-                let mut edge_clone = self.edges[edges[i]].clone();
-
-                self.triangles[tri].orient(Orientation::Even);
-                edge_clone.induce_orientation(&self.triangles[tri]);
-                if edge_clone.orientation() == edge_o {
-                    self.triangles[tri].swap_orientation();
-                }
-
-                orientations.push(self.triangles[tri].orientation());
-            }
-
-            // Check that we only need one orienation
-            if orientations.len() > 1 {
-                for i in 0..orientations.len()-1 {
-                    if orientations[i] != orientations[i+1] {
-                        return Err("unorientable.".to_string());
-                    }
-                }
-            } else if orientations.len() == 0 {
-                orientations.push(Orientation::Even);
-            }
-
-            // Induce orientation onto faces and get neighbors
-            self.triangles[tri].orient(orientations[0]);
-            self._orient_edges(tri, &mut visited_edges);
-            for nbhr_of_nbhr in self._nbhrs(tri) {
-                if !visited_tris[nbhr_of_nbhr] && !nbhrs.contains(&nbhr_of_nbhr) {
-                    nbhrs.push(nbhr_of_nbhr);
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    fn _orient_edges(&mut self, tri: usize, visited_edges: &mut Vec<bool>) {
-        let edges = self._edges(tri);
-        for i in 0..3 {
-            if !visited_edges[edges[i]] {
-                self.edges[edges[i]].induce_orientation(&self.triangles[tri]);
-                visited_edges[edges[i]] = true; 
-            }
-        }
     }
 
     fn _edges(&self, tri: usize) -> [usize; 3] {
@@ -281,20 +193,5 @@ impl Mesh {
         }
 
         edges
-    }
-
-    fn _nbhrs(&self, tri: usize) -> Vec<usize> {
-        let mut nbhrs = Vec::new();
-        let edges = self._edges(tri);
-        for i in 0..self.triangles.len() {
-            if i == tri { continue; }
-            if self.triangles[i].is_face(&self.edges[edges[0]])
-                || self.triangles[i].is_face(&self.edges[edges[1]])
-                || self.triangles[i].is_face(&self.edges[edges[2]]) {
-                nbhrs.push(i);
-            }
-        }
-
-        nbhrs
     }
 }

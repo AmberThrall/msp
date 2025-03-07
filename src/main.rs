@@ -3,11 +3,6 @@ use prelude::*;
 use std::rc::Rc;
 
 fn main() {
-    let mut test = Mesh::load("test.off").unwrap();
-    test.orient().unwrap();
-    println!("edges = {:?}", test.edges);
-    println!("triangles = {:?}", test.triangles);
-
     // Load the mesh in from disk
     println!("Loading mesh...");
     let mesh = match Mesh::load("Plane.off") {

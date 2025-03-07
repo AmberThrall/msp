@@ -21,6 +21,7 @@ def read_chain(filename):
     return chain
 
 # Load mesh and chains
+#V, F = read_off("Torus.off")
 V, F = read_off("Plane.off")
 c1 = read_chain("Chain1.txt")
 c2 = read_chain("Chain2.txt")
