@@ -1,4 +1,5 @@
 use nalgebra::Vector3;
+use std::collections::VecDeque;
 use std::fs::File;
 use std::path::Path;
 use std::io::{prelude::*, BufReader};
@@ -66,11 +67,7 @@ impl Triangle {
         let ac = c - a;
         let cross = ab.cross(&ac);
 
-        //let centroid = (a + b + c) / 3.0;
-        //let outward = centroid.normalize();
-        let outward = Vector3::y();
-
-        if cross.dot(&outward) > 0.0 {
+        if cross.y > 0.0 {
             // Oriented CCW
             (cross.norm() as f64) / 2.0
         } 
@@ -95,15 +92,24 @@ impl Triangle {
         self.1 = tmp;
     }
 
-    pub fn orient(&mut self, orientation: Orientation, mesh: &Mesh) {
-        if orientation != self.orientation(mesh) { 
+    pub fn orient(&mut self, orientation: Orientation) {
+        let mut v = [self.0, self.1, self.2];
+        v.sort();
+        self.0 = v[0]; self.1 = v[1]; self.2 = v[2];
+
+        if orientation == Orientation::CW { 
             self.swap_orientation();    
         }
     }
 
-    pub fn orientation(&self, mesh: &Mesh) -> Orientation {
-        if self.signed_area(mesh) > 0.0 { return Orientation::CCW }
-        else { return Orientation::CW }
+    pub fn orientation(&self) -> Orientation {
+             if self.0 < self.1 && self.1 < self.2 { Orientation::CCW } // [0,1,2]
+        else if self.0 < self.2 && self.2 < self.1 { Orientation::CW  } // [0,2,1]
+        else if self.1 < self.0 && self.0 < self.2 { Orientation::CW  } // [1,0,2]
+        else if self.1 < self.2 && self.2 < self.0 { Orientation::CCW } // [1,2,0]
+        else if self.2 < self.0 && self.0 < self.1 { Orientation::CCW } // [2,0,1]
+        else if self.2 < self.1 && self.1 < self.2 { Orientation::CW  } // [2,1,0]
+        else { Orientation::CW } // Degenerate triangle
     }
 }
 
@@ -159,27 +165,95 @@ impl Mesh {
         })
     }
     
-    pub fn orient(&mut self) -> Result<(), String> {
-        // Orient the triangles by signed area.
-        for i in 0..self.triangles.len() {
-            let mut tri = self.triangles[i].clone();
-            tri.orient(Orientation::CCW, self); 
-            self.triangles[i] = tri;
+    pub fn orient2d(&mut self) -> Result<(), String> {
+        // Orient all edges lexicographically.
+        for edge in self.edges.iter_mut() {
+            let a = edge.0; let b = edge.1;
+            edge.0 = a.min(b); edge.1 = a.max(b);
         }
 
-        // Induce orientations onto edges
+        // Orient the triangles by signed area.
+        for i in 0..self.triangles.len() {
+            self.triangles[i].orient(Orientation::CCW); 
+
+            if self.triangles[i].signed_area(self) < 0.0 {
+                self.triangles[i].swap_orientation();
+            }
+        }
+
+        // Induce orientation onto edges.
         let mut visited = vec![false; self.edges.len()];
         for tri in 0..self.triangles.len() {
-            let edges = self._edges(tri); // Get the edges of tri.
-            for edge in edges {
-                if visited[edge] { continue }
-                
-                self.edges[edge].induce_orientation(&self.triangles[tri]);
-                visited[edge] = true;
+            let edges = self._edges(tri);
+            for edge in edges.iter() {
+                if visited[*edge] { continue; }
+                self.edges[*edge].induce_orientation(&self.triangles[tri]);
+                visited[*edge] = true;
             }
         }
 
         Ok(())        
+    }
+
+    pub fn orient(&mut self) -> Result<(), String> {
+        // Orient all edges lexicographically.
+        for edge in self.edges.iter_mut() {
+            let a = edge.0; let b = edge.1;
+            edge.0 = a.min(b); edge.1 = a.max(b);
+        }
+
+        // Orient all triangles lexicographically (CCW) to start.
+        for tri in self.triangles.iter_mut() { tri.orient(Orientation::CCW); }
+
+        // Keep track of what triangles we have oriented.
+        let mut visited = vec![false; self.triangles.len()]; 
+
+        // Fix the first triangle's orientation and add it to the FIFO queue.
+        visited[0] = true;
+        let mut queue = VecDeque::new();
+        queue.push_back(0);
+        
+        // Intermediate step: propogate the orientation of face tri to its neighbors.
+        while let Some(tri) = queue.pop_front() {
+            // Get tri's edges and what oriention tri induces onto each edge.
+            let edges = self._edges(tri);
+            let orientations: Vec<Orientation> = edges.iter()
+                .map(|i| { 
+                    let mut e = self.edges[*i].clone(); 
+                    e.induce_orientation(&self.triangles[tri]); 
+                    e.orientation() 
+                })
+                .collect();
+
+            // Determine the orientation of each neighboring face.
+            for nbhr in self._nbhrs(tri) {
+                // For each shared edge (should be 1), ensure that tri and nbhr induce opposite
+                // orientations.
+                for i in 0..edges.len() {
+                    if !self.triangles[nbhr].is_face(&self.edges[edges[i]]) { continue; }
+
+                    let mut edge_copy = self.edges[edges[i]].clone();
+                    edge_copy.induce_orientation(&self.triangles[nbhr]);
+
+                    // If both triangles induce the same oriention, swap nbhr's orientation.
+                    if orientations[i] == edge_copy.orientation() {
+                        if visited[nbhr] { // We've already oriented this triangle and now we need
+                                           // to change it's orientation!
+                            return Err(format!("{:?} requires both CW and CCW orientation.", self.triangles[nbhr]));
+                        }
+                        self.triangles[nbhr].swap_orientation();
+                    }
+                }
+                                
+                // Add each unvisited neigbhor to our queue
+                if !visited[nbhr] { 
+                    visited[nbhr] = true;
+                    queue.push_back(nbhr);
+                }
+            }
+        }
+
+        Ok(())
     }
 
     fn _edges(&self, tri: usize) -> [usize; 3] {
@@ -193,5 +267,21 @@ impl Mesh {
         }
 
         edges
+    }
+
+    fn _nbhrs(&self, tri: usize) -> Vec<usize> {
+        let edges: Vec<&Edge> = self._edges(tri).iter().map(|i| &self.edges[*i]).collect();
+
+        let mut nbhrs = Vec::new();
+        for i in 0..self.triangles.len() {
+            if i == tri { continue; }
+
+            if self.triangles[i].is_face(edges[0])
+                || self.triangles[i].is_face(edges[1])
+                || self.triangles[i].is_face(edges[2]) {
+                nbhrs.push(i);
+            }
+        }
+        nbhrs
     }
 }

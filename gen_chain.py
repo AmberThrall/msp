@@ -1,4 +1,4 @@
-WAVEFRONT = "example2d.obj"
+WAVEFRONT = "plane.obj"
 MESH = "Plane"
 CHAINS = ["Chain1", "Chain2", "Chain3"]
 

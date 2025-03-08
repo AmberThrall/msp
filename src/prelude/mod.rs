@@ -1,9 +1,11 @@
 mod mesh;
 mod chain;
+mod current;
 mod msp;
 
 pub use mesh::*;
 pub use chain::*;
+pub use current::*;
 pub use msp::*;
 
 use std::rc::Rc;
