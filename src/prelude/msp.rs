@@ -81,8 +81,11 @@ pub fn median_shape(mesh: Rc<Mesh>, input: Vec<Rc<Chain>>, alpha: Vec<f64>, mu: 
         let tri = mesh.triangles[c];
 
         if !tri.is_face(&edge) { 0.0 }
-        else if edge.orientation() == tri.orientation() { 1.0 }
-        else { -1.0 }
+        else {
+            let mut ec = edge.clone();
+            ec.induce_orientation(&tri);
+            if ec.orientation() == tri.orientation() { 1.0 } else { -1.0 }
+        }
     });
 
     for h in 0..N {

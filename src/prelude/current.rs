@@ -74,7 +74,7 @@ impl Current {
                     break;
                 }
                 else if self.mesh.edges[idx] == Edge(b,a) {
-                    chain.coeff[idx] = 1.0;
+                    chain.coeff[idx] = -1.0;
                     found = true;
                     break;
                 }

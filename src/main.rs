@@ -26,14 +26,14 @@ fn main() {
 
     // Load the mesh in from disk
     println!("Loading mesh...");
-    let mesh = match Mesh::load("Plane.off") {
+    let mesh = match Mesh::load("Sphere.off") {
         Ok(mut m) => {
             // Orient the mesh
             println!("Orienting mesh...");
-            if m.orient2d().is_err() { 
+            /*if m.orient2d().is_err() { 
                 std::eprintln!("Error: mesh is not orientable.");
                 std::process::exit(1);
-            }
+            }*/
             Rc::new(m)
         },
         Err(e) => {
@@ -44,15 +44,15 @@ fn main() {
 
     // Load the chains in from disk
     println!("Loading currents...");
-    let c1 = load_current(mesh.clone(), "Current1.txt");
-    let c2 = load_current(mesh.clone(), "Current2.txt");
-    //let c3 = load_current(mesh.clone(), "Current3.txt");
+    let c1 = load_current(mesh.clone(), "SphereCurrent1.txt");
+    let c2 = load_current(mesh.clone(), "SphereCurrent2.txt");
+    //let c3 = load_current(mesh.clone(), "SphereCurrent3.txt");
 
     // Solve the problem
     println!("Solving LP...");
-    let msp = MedianShape::new(mesh.clone(), 1e-3, 1e-5)
+    let msp = MedianShape::new(mesh.clone(), 1e-5, 1e-7)
         .add_chain(c1.clone(), 0.5)
-       // .add_chain(c2.clone(), 0.33)
+        //.add_chain(c2.clone(), 0.33)
         .add_chain(c2.clone(), 0.5);
 
 

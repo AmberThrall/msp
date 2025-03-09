@@ -1,6 +1,6 @@
-WAVEFRONT = "plane.obj"
-MESH = "Plane"
-CHAINS = ["Chain1", "Chain2", "Chain3"]
+WAVEFRONT = "sphere.obj"
+MESH = "Sphere"
+CURRENTS = ["Current1", "Current2"]
 
 def read_obj(filename):
     with open(filename) as file:
@@ -34,7 +34,7 @@ def closest_point(target, points):
         d = distance(target, pt)
         if d < min_dist:
             min_dist = d
-            closest = i
+            closest = pt 
 
     return closest
 
@@ -50,11 +50,22 @@ with open("{}.off".format(MESH), "w") as f:
         f.write("3 {} {} {}\n".format(face[0], face[1], face[2]))
 
 # Create the chains
-for chain in CHAINS:
-    with open("{}.txt".format(chain), "w") as f:
-        for edge in objects[chain]["l"]:
-            a = closest_point(objects[chain]["v"][edge[0]], objects[MESH]["v"])
-            b = closest_point(objects[chain]["v"][edge[1]], objects[MESH]["v"])
+for current in CURRENTS:
+    vertices = []
+    for i, edge in enumerate(objects[current]["l"]):
+        a = closest_point(objects[current]["v"][edge[0]], objects[MESH]["v"])
+        b = closest_point(objects[current]["v"][edge[1]], objects[MESH]["v"])
+        if a not in vertices:
+            vertices.append(a);
+        if b not in vertices:
+            vertices.append(b);
 
-            f.write("{} {}\n".format(a,b))
+    sorted_vertices = sorted(vertices, key=lambda x: x[1])
+    print(sorted_vertices)
+
+    with open("Sphere{}.txt".format(current), "w") as f:
+        for i, v in enumerate(sorted_vertices):
+            if i > 0:
+                f.write("\n")
+            f.write("{} {} {}".format(v[0], v[1], v[2]))
 
