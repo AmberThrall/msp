@@ -46,17 +46,17 @@ fn main() {
     println!("Loading currents...");
     let c1 = load_current(mesh.clone(), "SphereCurrent1.txt");
     let c2 = load_current(mesh.clone(), "SphereCurrent2.txt");
-    //let c3 = load_current(mesh.clone(), "SphereCurrent3.txt");
+    let c3 = load_current(mesh.clone(), "SphereCurrent3.txt");
 
     // Solve the problem
     println!("Solving LP...");
-    let msp = MedianShape::new(mesh.clone(), 1e-5, 1e-7)
-        .add_chain(c1.clone(), 0.5)
-        //.add_chain(c2.clone(), 0.33)
-        .add_chain(c2.clone(), 0.5);
+    let msp = MedianShape::new(mesh.clone(), 1e-3, 1e-5)
+        .add_chain(c1.clone(), 0.33)
+        .add_chain(c2.clone(), 0.33)
+        .add_chain(c3.clone(), 0.34);
 
 
-    let median = match msp.solve() {
+    let result = match msp.solve() {
         Ok(m) => m,
         Err(e) => {
             std::eprintln!("Error solving LP: {}", e);
@@ -64,9 +64,13 @@ fn main() {
         }
     };
 
-    println!("Result: {}", median);
+    println!("Result: {}", result.median);
     c1.save("chain1.txt").expect("failed to save chain 1");
     c2.save("chain2.txt").expect("failed to save chain 2");
-    //c3.save("chain3.txt").expect("failed to save chain 3");
-    median.save("median.txt").expect("failed to save median chain");
+    c3.save("chain3.txt").expect("failed to save chain 3");
+    result.median.save("median.txt").expect("failed to save median chain");
+    for (i, decomp) in result.decomp.iter().enumerate() {
+        decomp.0.save(&format!("decomp_r{}.txt", i+1)).expect("failed to save chain.");
+        decomp.1.save(&format!("decomp_s{}.txt", i+1)).expect("failed to save chain.");
+    }
 }

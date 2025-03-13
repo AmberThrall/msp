@@ -60,7 +60,7 @@ impl Current {
     }
 
     pub fn as_chain(&self) -> Result<Chain, String> {
-        let mut chain = Chain::zero(self.mesh.clone());
+        let mut chain = Chain::zero(1, self.mesh.clone());
 
         for i in 1..self.path.len() {
             let a = self.path[i-1];

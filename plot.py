@@ -26,8 +26,15 @@ def read_chain(filename):
 V, F = read_off("Sphere.off")
 c1 = read_chain("chain1.txt")
 c2 = read_chain("chain2.txt")
-#c3 = read_chain("chain3.txt")
+c3 = read_chain("chain3.txt")
 c_median = read_chain("median.txt")
+cr1 = read_chain("decomp_r1.txt")
+cs1 = read_chain("decomp_s1.txt")
+cr2 = read_chain("decomp_r2.txt")
+cs2 = read_chain("decomp_s2.txt")
+cr3 = read_chain("decomp_r3.txt")
+cs3 = read_chain("decomp_s3.txt")
+
 
 # Setup figure
 fig = plt.figure()
@@ -40,9 +47,14 @@ Z = [v[1] for v in V]
 #ax.plot_trisurf(X, Y, Z, triangles=F, color=(0,0,0,0), edgecolor='gray', linewidth=0.1)
 #ax.scatter3D(X, Y, Z, color='black')
 
-# Plot the chains
-for color, chain in [("green", c1), ("blue", c2), ("black", c_median)]:
-#for color, chain in [("green", c1), ("blue", c2), ("red", c3), ("black", c_median)]:
+# Plot the 2-chains
+#for color, chain in [("red", cs1)]:
+for color, chain in [("green", cs1), ("blue", cs2), ("red", cs3)]:
+    ax.plot_trisurf(X, Y, Z, triangles=chain, color=color, alpha=0.5)
+
+# Plot the 1-chains
+#for color, chain in [("red", c3), ("black", c_median), ("gray", cr1)]:
+for color, chain in [("green", c1), ("blue", c2), ("red", c3), ("black", c_median), ("gray", cr1), ("gray", cr2), ("gray", cr3)]:
     if len(chain) == 0:
         continue
     data = [[[V[i][0], V[i][2], V[i][1]] for i in x] for x in chain]

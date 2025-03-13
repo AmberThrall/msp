@@ -5,6 +5,11 @@ use good_lp::{constraint, default_solver, variable, variables, Expression, Varia
 
 const EPSILON: f64 = 1e-6;
 
+pub struct MSPResult {
+    pub median: Chain,
+    pub decomp: Vec<(Chain, Chain)>,
+}
+
 #[derive(Default)]
 struct Variables {
     pub t_plus: Vec<Variable>,
@@ -15,7 +20,7 @@ struct Variables {
     pub s_minus: Vec<Vec<Variable>>,
 }
 
-pub fn median_shape(mesh: Rc<Mesh>, input: Vec<Rc<Chain>>, alpha: Vec<f64>, mu: f64, lambda: f64) -> Result<Chain, String> {
+pub fn median_shape(mesh: Rc<Mesh>, input: Vec<Rc<Chain>>, alpha: Vec<f64>, mu: f64, lambda: f64) -> Result<MSPResult, String> {
     if input.len() != alpha.len() {
         return Err(format!("invalid input, got {} chains and {} weights.", input.len(), alpha.len()));
     }
@@ -114,11 +119,33 @@ pub fn median_shape(mesh: Rc<Mesh>, input: Vec<Rc<Chain>>, alpha: Vec<f64>, mu: 
         .solve()
         .map_err(|e| format!("{}", e))?;
 
-    let mut res = Chain::zero(mesh.clone());
+    let mut res = MSPResult {
+        median: Chain::zero(1, mesh.clone()),
+        decomp: Vec::new(),
+    };
+
+    for _ in 0..N { res.decomp.push((Chain::zero(1, mesh.clone()), Chain::zero(2, mesh.clone()))); }
+
     for i in 0..m {
         let v = solution.value(vars.t_plus[i]) - solution.value(vars.t_minus[i]);
         if v.abs() > EPSILON {
-            res.coeff[i] = v;
+            res.median.coeff[i] = v;
+        }
+
+        for h in 0..N {
+            let v = solution.value(vars.r_plus[h][i]) - solution.value(vars.r_minus[h][i]);
+            if v.abs() > EPSILON {
+                res.decomp[h].0.coeff[i] = v;
+            }
+        }
+    }
+
+    for j in 0..n {
+        for h in 0..N {
+            let v = solution.value(vars.s_plus[h][j]) - solution.value(vars.s_minus[h][j]);
+            if v.abs() > EPSILON {
+                res.decomp[h].1.coeff[j] = v;
+            }
         }
     }
 

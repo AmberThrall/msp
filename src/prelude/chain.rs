@@ -6,14 +6,20 @@ use std::fmt;
 use std::io::{prelude::*, BufReader};
 
 pub struct Chain {
+    pub dim: u32,
     pub mesh: Rc<Mesh>,
     pub coeff: Vec<f64>,
 }
 
 impl Chain {
-    pub fn zero(mesh: Rc<Mesh>) -> Chain {
-        let coeff = vec![0.0; mesh.edges.len()];
+    pub fn zero(dim: u32, mesh: Rc<Mesh>) -> Chain {
+        let coeff = match dim {
+            1 => vec![0.0; mesh.edges.len()],
+            2 => vec![0.0; mesh.triangles.len()],
+            _ => panic!("Unsupported dimension.")
+        };
         Chain {
+            dim,
             mesh,
             coeff,
         }
@@ -48,6 +54,7 @@ impl Chain {
         }
 
         Ok(Chain {
+            dim: 1,
             mesh,
             coeff,
         })
@@ -57,7 +64,11 @@ impl Chain {
         let mut file = File::create(path)?;
         for i in 0..self.coeff.len() {
             if self.coeff[i] != 0.0 {
-                write!(file, "{} {}\n", self.mesh.edges[i].0, self.mesh.edges[i].1)?;
+                match self.dim {
+                    1 => write!(file, "{} {}\n", self.mesh.edges[i].0, self.mesh.edges[i].1)?,
+                    2 => write!(file, "{} {} {}\n", self.mesh.triangles[i].0, self.mesh.triangles[i].1, self.mesh.triangles[i].2)?,
+                    _ => panic!("unsupported dimension.")
+                }
             }
         }
         Ok(())

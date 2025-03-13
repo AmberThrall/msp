@@ -1,6 +1,6 @@
 WAVEFRONT = "sphere.obj"
 MESH = "Sphere"
-CURRENTS = ["Current1", "Current2"]
+CURRENTS = ["Current1", "Current2", "Current3"]
 
 def read_obj(filename):
     with open(filename) as file:

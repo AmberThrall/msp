@@ -35,7 +35,7 @@ impl MedianShape {
         self
     }
 
-    pub fn solve(self) -> Result<Chain, String> {
+    pub fn solve(self) -> Result<MSPResult, String> {
         median_shape(self.mesh, self.chains, self.alpha, self.mu, self.lambda)
     }
 }
